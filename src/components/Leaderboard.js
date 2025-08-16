@@ -1,5 +1,6 @@
 import React from 'react';
 import { Heart, Gift, Trophy, Calendar, TrendingUp } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 // 二次元风格排行榜组件
 function Leaderboard({ wishes, timeframe, setTimeframe }) {
@@ -57,17 +58,18 @@ function Leaderboard({ wishes, timeframe, setTimeframe }) {
 
                 <div className="flex justify-center gap-4">
                     {timeframeOptions.map(({ key, label, icon: Icon }) => (
-                        <button
+                        <motion.button
                             key={key}
                             onClick={() => setTimeframe(key)}
-                            className={`px-8 py-4 rounded-2xl font-bold transition-all duration-300 transform hover:scale-105 hover-lift flex items-center gap-3 ${timeframe === key
-                                ? 'bg-gradient-to-r from-pink-400 via-purple-500 to-indigo-500 text-white shadow-2xl'
-                                : 'glass text-white hover:bg-white/20 border border-white/30'
-                                }`}
+                            className={`btn btn-glow flex items-center gap-3 ${timeframe === key
+                                ? 'btn-rainbow'
+                                : 'btn-ocean'}`}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                         >
                             <Icon className="w-5 h-5" />
                             {label}
-                        </button>
+                        </motion.button>
                     ))}
                 </div>
             </div>

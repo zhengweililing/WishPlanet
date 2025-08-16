@@ -10,7 +10,15 @@ const SignModal = ({ isOpen, onClose, signId, onCreateWish, savedWishes = [], on
     // 获取当前指示牌的心愿
     useEffect(() => {
         if (signId && savedWishes.length > 0) {
-            const wishes = savedWishes.filter(wish => wish.signId === signId);
+            // 对于合约数据，显示所有心愿；对于本地数据，过滤特定signId
+            const wishes = savedWishes.filter(wish => {
+                // 如果心愿有signId属性，说明是本地数据，需要过滤
+                if (wish.signId !== undefined) {
+                    return wish.signId === signId;
+                }
+                // 如果没有signId属性，说明是合约数据，显示所有
+                return true;
+            });
             setSignWishes(wishes);
         } else {
             setSignWishes([]);
@@ -202,15 +210,21 @@ const SignModal = ({ isOpen, onClose, signId, onCreateWish, savedWishes = [], on
                                                     <div className="flex items-start justify-between mb-3">
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-2xl">
-                                                                {getWishCategoryEmoji(wish.wishCategory)}
+                                                                {getWishCategoryEmoji(wish.wishCategory || 'other')}
                                                             </span>
                                                             <div>
                                                                 <h4 className="font-bold text-white text-lg line-clamp-1">
-                                                                    {wish.wishTitle}
+                                                                    {wish.wishTitle || wish.content || '未命名心愿'}
                                                                 </h4>
                                                                 <p className="text-white/60 text-sm">
-                                                                    {formatDate(wish.timestamp)}
+                                                                    {formatDate(wish.timestamp || wish.createdAt)}
                                                                 </p>
+                                                                {/* 显示创建者昵称（仅合约数据） */}
+                                                                {wish.nickname && (
+                                                                    <p className="text-purple-300/80 text-xs">
+                                                                        👤 {wish.nickname}
+                                                                    </p>
+                                                                )}
                                                             </div>
                                                         </div>
                                                         <div className="flex gap-1">
@@ -232,7 +246,7 @@ const SignModal = ({ isOpen, onClose, signId, onCreateWish, savedWishes = [], on
                                                     </div>
 
                                                     <p className="text-white/80 text-sm line-clamp-2 mb-3">
-                                                        {wish.wishContent}
+                                                        {wish.wishContent || wish.content || '心愿内容'}
                                                     </p>
 
                                                     {wish.feeling && (
@@ -241,9 +255,16 @@ const SignModal = ({ isOpen, onClose, signId, onCreateWish, savedWishes = [], on
                                                         </p>
                                                     )}
 
+                                                    {/* 合约地址信息（仅合约数据） */}
+                                                    {wish.address && (
+                                                        <p className="text-blue-200/60 text-xs bg-blue-500/10 rounded-lg p-2 mb-3 break-all">
+                                                            🔗 {wish.address}
+                                                        </p>
+                                                    )}
+
                                                     <div className="flex items-center justify-between text-sm">
                                                         <span className="text-white/60">
-                                                            {wish.type === 'wish' ? '💫 心愿' : `📁 ${wish.type}`}
+                                                            {wish.address ? '⛓️ 链上心愿' : wish.type === 'wish' ? '💫 本地心愿' : `📁 ${wish.type}`}
                                                         </span>
                                                         <div className="flex items-center gap-4">
                                                             <span className="flex items-center gap-1 text-pink-300">
@@ -252,7 +273,7 @@ const SignModal = ({ isOpen, onClose, signId, onCreateWish, savedWishes = [], on
                                                             </span>
                                                             <span className="flex items-center gap-1 text-yellow-300">
                                                                 <Gift size={14} />
-                                                                {wish.donations || 0}
+                                                                {(wish.donations || wish.totalRewards || 0)} MON
                                                             </span>
                                                         </div>
                                                     </div>

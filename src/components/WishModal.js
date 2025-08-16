@@ -1,5 +1,6 @@
 import React from 'react';
 import { Heart, Gift, Star } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 // 二次元风格愿望详情弹窗
 function WishModal({ wish, isOpen, onClose }) {
@@ -79,14 +80,22 @@ function WishModal({ wish, isOpen, onClose }) {
 
                     {/* Action buttons */}
                     <div className="flex gap-6 pt-4">
-                        <button className="btn btn-accent flex-1 flex items-center justify-center gap-4 py-6 text-xl font-bold hover-scale">
+                        <motion.button
+                            className="btn btn-sakura btn-lg btn-glow flex-1 flex items-center justify-center gap-4"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                        >
                             <Heart className="w-7 h-7" />
                             💖 点赞支持
-                        </button>
-                        <button className="btn btn-primary flex-1 flex items-center justify-center gap-4 py-6 text-xl font-bold hover-scale">
+                        </motion.button>
+                        <motion.button
+                            className="btn btn-fire btn-lg btn-glow flex-1 flex items-center justify-center gap-4"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                        >
                             <Gift className="w-7 h-7" />
                             💰 打赏助力
-                        </button>
+                        </motion.button>
                     </div>
                 </div>
             </div>

@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 
 // Three.js 场景组件 - 显示星球和指示牌
-function ThreeScene({ onSignClick }) {
+function ThreeScene({ onSignClick, wishes = [] }) {
     const mountRef = useRef(null);
     const sceneRef = useRef(null);
     const rendererRef = useRef(null);
@@ -118,103 +118,165 @@ function ThreeScene({ onSignClick }) {
 
         scene.add(backgroundElements);
 
-        // 创建指示牌
+        // 创建指示牌 - 仅根据真实心愿数据生成
         const signboards = [];
-        const signPositions = [
-            { x: 0, y: 1.5, z: 0 },     // 顶部
-            { x: 1.5, y: 0, z: 0 },     // 右侧
-            { x: -1.5, y: 0, z: 0 },    // 左侧
-            { x: 0, y: 0, z: 1.5 },     // 前方
-            { x: 0, y: -1.5, z: 0 }     // 底部
-        ];
 
-        signPositions.forEach((pos, index) => {
-            const signGroup = new THREE.Group();
+        // 只有当有心愿数据时才创建指示牌
+        const wishCount = wishes.length;
+        if (wishCount === 0) {
+            console.log("没有心愿数据，不创建指示牌");
+        } else {
+            const maxSigns = Math.min(wishCount, 12); // 最多显示12个指示牌
 
-            // 计算从星球中心到位置的方向
-            const direction = new THREE.Vector3(pos.x, pos.y, pos.z).normalize();
+            // 生成指示牌位置 - 在球面上均匀分布
+            const signPositions = [];
 
-            // 把手 - 从星球表面向外延伸
-            const handleGeometry = new THREE.CylinderGeometry(0.03, 0.02, 0.4, 8);
-            const handleMaterial = new THREE.MeshBasicMaterial({ color: 0x8B4513 }); // 棕色把手
-            const handle = new THREE.Mesh(handleGeometry, handleMaterial);
+            if (maxSigns <= 5) {
+                // 少量指示牌时使用固定位置
+                const fixedPositions = [
+                    { x: 0, y: 1.5, z: 0 },     // 顶部
+                    { x: 1.5, y: 0, z: 0 },     // 右侧
+                    { x: -1.5, y: 0, z: 0 },    // 左侧
+                    { x: 0, y: 0, z: 1.5 },     // 前方
+                    { x: 0, y: -1.5, z: 0 }     // 底部
+                ];
+                for (let i = 0; i < maxSigns; i++) {
+                    signPositions.push(fixedPositions[i]);
+                }
+            } else {
+                // 多个指示牌时在球面上均匀分布
+                for (let i = 0; i < maxSigns; i++) {
+                    const phi = Math.acos(1 - 2 * (i + 0.5) / maxSigns); // 纬度
+                    const theta = Math.PI * (1 + Math.sqrt(5)) * i; // 经度，使用黄金比例分布
 
-            // 将把手定位到星球表面，并朝向外部
-            const surfacePosition = direction.clone().multiplyScalar(2.0); // 星球半径是2
-            handle.position.copy(direction.clone().multiplyScalar(2.2)); // 把手中心稍微外移
-            handle.lookAt(direction.clone().multiplyScalar(3)); // 把手朝向外侧
-            signGroup.add(handle);
+                    const x = 1.5 * Math.sin(phi) * Math.cos(theta);
+                    const y = 1.5 * Math.cos(phi);
+                    const z = 1.5 * Math.sin(phi) * Math.sin(theta);
 
-            // 指示牌主体 - 适中尺寸
-            const signGeometry = new THREE.PlaneGeometry(0.5, 0.35);
-            const signMaterial = new THREE.MeshBasicMaterial({
-                color: 0xF5F5F5, // 白色牌子
-                transparent: true,
-                opacity: 0.95,
-                side: THREE.DoubleSide,
-            });
-            const sign = new THREE.Mesh(signGeometry, signMaterial);
-
-            // 指示牌边框
-            const borderGeometry = new THREE.PlaneGeometry(0.55, 0.4);
-            const borderMaterial = new THREE.MeshBasicMaterial({
-                color: 0x6A4C93, // Monad 紫色边框
-                transparent: true,
-                opacity: 0.8,
-                side: THREE.DoubleSide,
-            });
-            const border = new THREE.Mesh(borderGeometry, borderMaterial);
-            border.position.z = -0.001; // 稍微在背景后面
-
-            // 将指示牌放在把手顶端，竖立着
-            const signPosition = direction.clone().multiplyScalar(2.45);
-            sign.position.copy(signPosition);
-            border.position.copy(signPosition.clone().add(new THREE.Vector3(0, 0, -0.001)));
-
-            // 简化指示牌方向 - 暂时让牌子面向相机，先确保点击检测工作
-            sign.lookAt(new THREE.Vector3(0, 0, 0));
-            border.lookAt(new THREE.Vector3(0, 0, 0));
-
-            signGroup.add(border);
-            signGroup.add(sign);
-
-            // 添加小装饰星星 - 围绕竖立的指示牌
-            for (let i = 0; i < 3; i++) {
-                const starGeometry = new THREE.SphereGeometry(0.02, 8, 8);
-                const starMaterial = new THREE.MeshBasicMaterial({
-                    color: 0xB19CD9,
-                    transparent: true,
-                    opacity: 0.8,
-                });
-                const star = new THREE.Mesh(starGeometry, starMaterial);
-
-                const angle = (i / 3) * Math.PI * 2;
-                // 简单地围绕指示牌位置放置星星
-                const starPos = signPosition.clone();
-                starPos.add(new THREE.Vector3(
-                    Math.cos(angle) * 0.4,
-                    Math.sin(angle) * 0.3,
-                    Math.sin(angle) * 0.2
-                ));
-                star.position.copy(starPos);
-
-                signGroup.add(star);
+                    signPositions.push({ x, y, z });
+                }
             }
 
-            // 存储用户数据
-            signGroup.userData = {
-                signId: `sign_${index}`,
-                originalScale: 1,
-                signMesh: sign,
-                borderMesh: border,
-                isHovered: false
-            };
+            console.log(`创建 ${maxSigns} 个指示牌，对应 ${wishCount} 个真实心愿`);
 
-            console.log('创建指示牌:', `sign_${index}`, '位置:', signPosition); // 调试信息
+            signPositions.forEach((pos, index) => {
+                const wish = wishes[index]; // 获取对应的心愿数据
+                const signGroup = new THREE.Group();
 
-            scene.add(signGroup);
-            signboards.push(signGroup);
-        });
+                // 计算从星球中心到位置的方向
+                const direction = new THREE.Vector3(pos.x, pos.y, pos.z).normalize();
+
+                // 把手 - 从星球表面向外延伸
+                const handleGeometry = new THREE.CylinderGeometry(0.03, 0.02, 0.4, 8);
+                const handleMaterial = new THREE.MeshBasicMaterial({ color: 0x8B4513 }); // 棕色把手
+                const handle = new THREE.Mesh(handleGeometry, handleMaterial);
+
+                // 将把手定位到星球表面，并朝向外部
+                const surfacePosition = direction.clone().multiplyScalar(2.0); // 星球半径是2
+                handle.position.copy(direction.clone().multiplyScalar(2.2)); // 把手中心稍微外移
+                handle.lookAt(direction.clone().multiplyScalar(3)); // 把手朝向外侧
+                signGroup.add(handle);
+
+                // 指示牌主体 - 根据心愿数据调整样式
+                const signGeometry = new THREE.PlaneGeometry(0.5, 0.35);
+
+                // 根据心愿类型和状态选择颜色
+                let signColor = 0xF5F5F5; // 默认白色
+                let borderColor = 0x6A4C93; // 默认紫色
+
+                if (wish) {
+                    // 根据心愿的点赞数选择颜色
+                    if (wish.likes > 10) {
+                        signColor = 0xFFD700; // 金色 - 高人气心愿
+                        borderColor = 0xFF6B35; // 橙色边框
+                    } else if (wish.likes > 5) {
+                        signColor = 0xFFB6C1; // 粉色 - 中等人气
+                        borderColor = 0xFF69B4; // 深粉色边框
+                    } else if (wish.likes > 0) {
+                        signColor = 0xE6E6FA; // 薰衣草色 - 有点赞
+                        borderColor = 0x9370DB; // 紫色边框
+                    }
+
+                    // 如果有打赏，增加光泽效果
+                    if (wish.totalRewards > 0) {
+                        borderColor = 0xFFD700; // 金色边框表示有打赏
+                    }
+                }
+
+                const signMaterial = new THREE.MeshBasicMaterial({
+                    color: signColor,
+                    transparent: true,
+                    opacity: 0.95,
+                    side: THREE.DoubleSide,
+                });
+                const sign = new THREE.Mesh(signGeometry, signMaterial);
+
+                // 指示牌边框
+                const borderGeometry = new THREE.PlaneGeometry(0.55, 0.4);
+                const borderMaterial = new THREE.MeshBasicMaterial({
+                    color: borderColor,
+                    transparent: true,
+                    opacity: 0.8,
+                    side: THREE.DoubleSide,
+                });
+                const border = new THREE.Mesh(borderGeometry, borderMaterial);
+                border.position.z = -0.001; // 稍微在背景后面
+
+                // 将指示牌放在把手顶端，竖立着
+                const signPosition = direction.clone().multiplyScalar(2.45);
+                sign.position.copy(signPosition);
+                border.position.copy(signPosition.clone().add(new THREE.Vector3(0, 0, -0.001)));
+
+                // 简化指示牌方向 - 暂时让牌子面向相机，先确保点击检测工作
+                sign.lookAt(new THREE.Vector3(0, 0, 0));
+                border.lookAt(new THREE.Vector3(0, 0, 0));
+
+                signGroup.add(border);
+                signGroup.add(sign);
+
+                // 添加小装饰星星 - 围绕竖立的指示牌
+                for (let i = 0; i < 3; i++) {
+                    const starGeometry = new THREE.SphereGeometry(0.02, 8, 8);
+                    const starMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xB19CD9,
+                        transparent: true,
+                        opacity: 0.8,
+                    });
+                    const star = new THREE.Mesh(starGeometry, starMaterial);
+
+                    const angle = (i / 3) * Math.PI * 2;
+                    // 简单地围绕指示牌位置放置星星
+                    const starPos = signPosition.clone();
+                    starPos.add(new THREE.Vector3(
+                        Math.cos(angle) * 0.4,
+                        Math.sin(angle) * 0.3,
+                        Math.sin(angle) * 0.2
+                    ));
+                    star.position.copy(starPos);
+
+                    signGroup.add(star);
+                }
+
+                // 存储用户数据，包含心愿信息
+                signGroup.userData = {
+                    signId: `sign_${index}`,
+                    originalScale: 1,
+                    signMesh: sign,
+                    borderMesh: border,
+                    isHovered: false,
+                    wish: wish || null, // 存储心愿数据
+                    wishContent: wish ? wish.content : `心愿牌 ${index + 1}`,
+                    likes: wish ? wish.likes : 0,
+                    totalRewards: wish ? wish.totalRewards : 0,
+                    nickname: wish ? wish.nickname : '未知用户'
+                };
+
+                console.log('创建指示牌:', `sign_${index}`, '位置:', signPosition, '心愿:', wish); // 调试信息
+
+                scene.add(signGroup);
+                signboards.push(signGroup);
+            });
+        }
 
         signboardsRef.current = signboards;
 
@@ -498,7 +560,7 @@ function ThreeScene({ onSignClick }) {
 
             renderer.dispose();
         };
-    }, [onSignClick]);
+    }, [onSignClick, wishes]);
 
     return <div ref={mountRef} className="w-full h-full" />;
 }

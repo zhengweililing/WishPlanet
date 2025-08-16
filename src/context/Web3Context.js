@@ -36,10 +36,10 @@ export const Web3Provider = ({ children }) => {
 
   // 智能合约配置 (需要部署到 Monad 测试网)
   // TODO: 请部署 WishPlanet 合约到 Monad 测试网并替换此地址
-  const CONTRACT_ADDRESS = "0x18cF1f01d4845D60ACD3160e8674Cce5CCAfd602"; // 占位符地址 - 需要替换
+  const CONTRACT_ADDRESS = "0xB2E88697F5535296B4f72365cC201448eaC4e376"; // 占位符地址 - 需要替换
   const CONTRACT_ABI = ABI;
 
-  console.log(ABI,'ABI-----------');
+  console.log(ABI, 'ABI-----------');
   const connectWallet = async () => {
     if (!window.ethereum) {
       toast.error("请安装 MetaMask 钱包");
@@ -437,6 +437,162 @@ export const Web3Provider = ({ children }) => {
     }
   };
 
+  // 获取所有心愿数据
+  const getAllWishes = async () => {
+    if (!contract) {
+      console.warn("合约不存在");
+      return [];
+    }
+
+    try {
+      console.log("正在调用合约 getAllWishes 方法...");
+      const result = await contract.getAllWishes();
+
+      const [addresses, wishesBytes] = result;
+      console.log("从合约获取到数据:", { addresses, wishesBytes });
+
+      const wishes = [];
+
+      for (let i = 0; i < addresses.length; i++) {
+        try {
+          const address = addresses[i];
+          const wishBytes = wishesBytes[i];
+
+          // 解码心愿数据
+          let decodedData;
+          try {
+            // 尝试直接解析 JSON
+            const wishString = ethers.toUtf8String(wishBytes);
+            decodedData = JSON.parse(wishString);
+          } catch (decodeError) {
+            console.warn("解码心愿数据失败:", decodeError);
+            // 如果解码失败，创建一个基本的心愿对象
+            decodedData = {
+              content: "心愿数据解析失败",
+              creator: address,
+              createdAt: Date.now()
+            };
+          }
+
+          // 获取该心愿的点赞数和打赏总额
+          const likes = await contract.getLikes(address);
+          const totalRewards = await contract.getTotalRewards(address);
+
+          const wish = {
+            id: `wish_${i}`,
+            address: address,
+            content: decodedData.content || decodedData.title || "无内容",
+            nickname: decodedData.nickname || decodedData.author || "匿名用户",
+            creator: address,
+            createdAt: decodedData.createdAt || Date.now(),
+            likes: Number(likes),
+            totalRewards: Number(totalRewards),
+            rawData: decodedData
+          };
+
+          wishes.push(wish);
+          console.log(`解析心愿 ${i + 1}:`, wish);
+        } catch (error) {
+          console.error(`处理心愿 ${i} 失败:`, error);
+        }
+      }
+
+      console.log("最终解析的心愿列表:", wishes);
+      return wishes;
+    } catch (error) {
+      console.error("获取所有心愿失败:", error);
+      toast.error("获取心愿数据失败");
+      return [];
+    }
+  };
+
+  // 创建心愿
+  const createWish = async (wishContent, nickname = "匿名用户") => {
+    if (!contract) {
+      toast.error("请先连接钱包");
+      return null;
+    }
+
+    try {
+      // 创建心愿数据对象
+      const wishData = {
+        content: wishContent,
+        nickname: nickname,
+        creator: account,
+        createdAt: Date.now(),
+        type: "wish"
+      };
+
+      // 将数据编码为bytes
+      const jsonString = JSON.stringify(wishData);
+      const encodedData = ethers.toUtf8Bytes(jsonString);
+
+      console.log("正在创建心愿:", wishData);
+      const tx = await contract.createWish(encodedData);
+      toast.loading("正在创建心愿...", { id: "create-wish" });
+
+      const receipt = await tx.wait();
+      toast.success("心愿创建成功！", { id: "create-wish" });
+
+      return receipt.hash;
+    } catch (error) {
+      console.error("创建心愿失败:", error);
+      toast.error("创建心愿失败", { id: "create-wish" });
+      return null;
+    }
+  };
+
+  // 给心愿点赞
+  const likeWish = async (wishOwnerAddress, multiplier = 1) => {
+    if (!contract) {
+      toast.error("请先连接钱包");
+      return false;
+    }
+
+    try {
+      // 计算点赞费用
+      const fee = await contract.calculateLikeFee(multiplier);
+
+      console.log("正在点赞心愿:", { wishOwnerAddress, multiplier, fee: ethers.formatEther(fee) });
+      const tx = await contract.likeWish(wishOwnerAddress, multiplier, { value: fee });
+      toast.loading("正在点赞...", { id: "like-wish" });
+
+      const receipt = await tx.wait();
+      toast.success("点赞成功！", { id: "like-wish" });
+
+      return true;
+    } catch (error) {
+      console.error("点赞失败:", error);
+      toast.error("点赞失败", { id: "like-wish" });
+      return false;
+    }
+  };
+
+  // 打赏心愿
+  const rewardWish = async (wishOwnerAddress, amount) => {
+    if (!contract) {
+      toast.error("请先连接钱包");
+      return false;
+    }
+
+    try {
+      const amountWei = ethers.parseEther(amount.toString());
+
+      console.log("正在打赏心愿:", { wishOwnerAddress, amount, amountWei });
+      const tx = await contract.rewardWish(wishOwnerAddress, { value: amountWei });
+      toast.loading("正在打赏...", { id: "reward-wish" });
+
+      const receipt = await tx.wait();
+      toast.success("打赏成功！", { id: "reward-wish" });
+
+      return true;
+    } catch (error) {
+      console.error("打赏失败:", error);
+      toast.error("打赏失败", { id: "reward-wish" });
+      return false;
+    }
+  };
+
   // Listen for account changes
   useEffect(() => {
     if (window.ethereum) {
@@ -476,6 +632,10 @@ export const Web3Provider = ({ children }) => {
     getCallCount,
     getMethodCall,
     getAllMethodCalls,
+    getAllWishes,
+    createWish,
+    likeWish,
+    rewardWish,
   };
 
   return <Web3Context.Provider value={value}>{children}</Web3Context.Provider>;
