@@ -15,7 +15,7 @@ export const MONAD_CHAIN_CONFIG = {
 };
 
 // 智能合约配置
-export const CONTRACT_ADDRESS = "0xAB00cF2B1f57693636D32fa50Bb3A25c04DB3a52";
+export const CONTRACT_ADDRESS = "0x37800c9ba3068304039F241967f99176584F1485";
 
 // 合约ABI
 export const CONTRACT_ABI = [
@@ -297,6 +297,46 @@ export class ContractService {
         this.signer = null;
         this.contract = null;
         this.account = null;
+    }
+
+    /**
+     * 创建心愿上链
+     */
+    async createWish(nickname, wishContent, fileIds = []) {
+        if (!this.contract) {
+            throw new Error("请先连接钱包");
+        }
+
+        try {
+            // 创建心愿数据对象
+            const wishData = {
+                type: 'wish',
+                nickname,
+                content: wishContent,
+                fileIds, // 存储在IndexedDB中的文件ID数组
+                creator: this.account,
+                createdAt: Date.now(),
+                likes: 0,
+                donations: 0
+            };
+
+            // 将数据编码为bytes
+            const jsonString = JSON.stringify(wishData);
+            const encodedData = ethers.toUtf8Bytes(jsonString);
+
+            console.log('正在上链心愿:', encodedData);
+            const tx = await this.contract.storeData(encodedData);
+            console.log('交易发送成功，等待确认:', tx.hash);
+
+            const receipt = await tx.wait();
+            console.log('心愿上链成功:', receipt.hash);
+
+            // 返回交易哈希作为心愿ID
+            return receipt.hash;
+        } catch (error) {
+            console.error("心愿上链失败:", error);
+            throw new Error(`心愿上链失败: ${error.message}`);
+        }
     }
 
     /**

@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import ThreeScene from '../components/ThreeScene';
 import ContentModal from '../components/ContentModal';
 import SignModal from '../components/SignModal';
+import AddWishModal from '../components/AddWishModal';
 import wishStorageService from '../services/wishStorageService';
 
 // 心愿星球页面 - 带指示牌和内容创建功能
-function WishPlanetPage() {
+function WishPlanetPage({ showAddWishModal, onCloseAddWish }) {
     const [showSignModal, setShowSignModal] = useState(false);
     const [showContentModal, setShowContentModal] = useState(false);
     const [selectedSignId, setSelectedSignId] = useState(null);
@@ -64,29 +65,27 @@ function WishPlanetPage() {
         setSavedWishes(wishes);
     };
 
+    // 关闭添加心愿弹窗
+    const handleCloseAddWishModal = () => {
+        if (onCloseAddWish) {
+            onCloseAddWish();
+        }
+    };
+
+    // 保存新心愿
+    const handleSaveNewWish = (wishData) => {
+        try {
+            const savedWish = wishStorageService.saveWish(wishData);
+            setSavedWishes(prev => [...prev, savedWish]);
+            console.log('新心愿保存成功:', savedWish);
+        } catch (error) {
+            console.error('保存新心愿失败:', error);
+            alert('保存心愿失败，请重试');
+        }
+    };
+
     return (
         <div className="min-h-screen overflow-hidden relative">
-            {/* 统计信息显示 */}
-            <div className="fixed top-4 left-4 z-50 bg-purple-900/40 backdrop-blur-lg border border-purple-400/30 rounded-2xl p-4 text-white">
-                <div className="text-sm">
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="text-yellow-300">✨</span>
-                        <span>心愿总数: {savedWishes.length}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-pink-300">💖</span>
-                        <span>点赞: {savedWishes.reduce((sum, wish) => sum + (wish.likes || 0), 0)}</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* 测试按钮 */}
-            <button
-                onClick={() => handleSignClick('sign_0')}
-                className="fixed top-20 right-4 z-50 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600"
-            >
-                测试指示牌弹窗
-            </button>
 
             {/* 主内容区域 */}
             <div className="relative">
@@ -111,6 +110,13 @@ function WishPlanetPage() {
                 onClose={handleCloseContentModal}
                 signId={selectedSignId}
                 onSave={handleWishSaved}
+            />
+
+            {/* 添加心愿弹窗 */}
+            <AddWishModal
+                isOpen={showAddWishModal}
+                onClose={handleCloseAddWishModal}
+                onSave={handleSaveNewWish}
             />
         </div>
     );

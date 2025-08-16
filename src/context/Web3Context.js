@@ -36,10 +36,10 @@ export const Web3Provider = ({ children }) => {
 
   // 智能合约配置 (需要部署到 Monad 测试网)
   // TODO: 请部署 WishPlanet 合约到 Monad 测试网并替换此地址
-  const CONTRACT_ADDRESS = "0xAB00cF2B1f57693636D32fa50Bb3A25c04DB3a52"; // 占位符地址 - 需要替换
+  const CONTRACT_ADDRESS = "0x18cF1f01d4845D60ACD3160e8674Cce5CCAfd602"; // 占位符地址 - 需要替换
   const CONTRACT_ABI = ABI;
 
-  console.log(ABI);
+  console.log(ABI,'ABI-----------');
   const connectWallet = async () => {
     if (!window.ethereum) {
       toast.error("请安装 MetaMask 钱包");
