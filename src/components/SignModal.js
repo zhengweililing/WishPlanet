@@ -7,7 +7,7 @@ const SignModal = ({ isOpen, onClose, signId, onCreateWish, savedWishes = [], on
     const [selectedWish, setSelectedWish] = useState(null);
     const [showWishDetail, setShowWishDetail] = useState(false);
 
-    // 获取当前指示牌的心愿
+    // 获取当前指示牌的心愿 - 只显示最近一次
     useEffect(() => {
         if (signId && savedWishes.length > 0) {
             // 对于合约数据，显示所有心愿；对于本地数据，过滤特定signId
@@ -19,7 +19,18 @@ const SignModal = ({ isOpen, onClose, signId, onCreateWish, savedWishes = [], on
                 // 如果没有signId属性，说明是合约数据，显示所有
                 return true;
             });
-            setSignWishes(wishes);
+            
+            // 按时间排序，只取最新的一个心愿
+            if (wishes.length > 0) {
+                const sortedWishes = wishes.sort((a, b) => {
+                    const timeA = a.timestamp || a.createdAt || 0;
+                    const timeB = b.timestamp || b.createdAt || 0;
+                    return timeB - timeA; // 降序排列，最新的在前
+                });
+                setSignWishes([sortedWishes[0]]); // 只保留最新的一个
+            } else {
+                setSignWishes([]);
+            }
         } else {
             setSignWishes([]);
         }
@@ -181,7 +192,7 @@ const SignModal = ({ isOpen, onClose, signId, onCreateWish, savedWishes = [], on
                                         这里记录着你的美好心愿和珍贵回忆
                                     </p>
                                     <div className="mt-2 text-purple-200/60">
-                                        心愿总数: {signWishes.length} 个 ✨
+                                        {signWishes.length > 0 ? '最近心愿 ✨' : '暂无心愿 💫'}
                                     </div>
                                 </div>
 
